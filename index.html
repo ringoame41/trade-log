@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#142b3b">
+<meta name="description" content="シンプルなスキャルピング・トレード記録アプリ">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>Trade Log</title>
+<style>
+:root{--ink:#172b3a;--muted:#71808b;--line:#e5eaee;--bg:#f4f7f8;--card:#fff;--accent:#176b66;--good:#16805d;--bad:#c34d4d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;font-size:14px}
+header{background:#142b3b;color:white;padding:22px 18px 20px}header .inner,main{max-width:760px;margin:auto}header small{opacity:.72;letter-spacing:.12em;font-weight:700}header h1{margin:5px 0 2px;font-size:24px}header p{margin:0;color:#c8d4dc;font-size:12px}
+main{padding:16px 14px 40px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px}.metric,.panel{background:var(--card);border:1px solid var(--line);border-radius:14px}.metric{padding:12px 11px}.metric label{display:block;color:var(--muted);font-size:11px}.metric strong{display:block;font-size:19px;margin-top:5px;font-variant-numeric:tabular-nums}.positive{color:var(--good)!important}.negative{color:var(--bad)!important}
+.panel{padding:16px;margin-bottom:14px}.panel h2{font-size:16px;margin:0 0 13px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.field{min-width:0}.field.full{grid-column:1/-1}label{display:block;color:#52616c;font-size:12px;margin-bottom:5px;font-weight:650}input,select,textarea{width:100%;border:1px solid #d9e1e6;border-radius:9px;padding:11px 10px;background:#fff;color:var(--ink);font:inherit;min-height:42px}input:focus,select:focus,textarea:focus{outline:2px solid #b6d8d2;border-color:var(--accent)}.seg{display:flex;gap:8px}.seg label{flex:1;margin:0}.seg input{position:absolute;opacity:0;pointer-events:none}.seg span{display:block;text-align:center;border:1px solid #d9e1e6;border-radius:9px;padding:10px}.seg input:checked+span{background:#e6f2f0;border-color:var(--accent);color:var(--accent);font-weight:700}
+.actions{display:flex;gap:8px;margin-top:14px}.btn{border:0;border-radius:9px;padding:11px 15px;font:inherit;font-weight:700;cursor:pointer}.primary{background:var(--accent);color:#fff;flex:1}.secondary{background:#edf1f3;color:#334653}.danger{background:#fff0f0;color:var(--bad)}.hint{color:var(--muted);font-size:11px;margin:9px 0 0}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.toolbar h2{margin:0}.toolbar select{width:auto;min-width:110px;padding:8px}.record{border-top:1px solid var(--line);padding:12px 0;display:grid;grid-template-columns:1fr auto;gap:8px}.record:first-child{border-top:0}.rec-title{font-weight:750}.rec-meta{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6}.rec-pnl{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}.rec-actions{grid-column:1/-1;display:flex;justify-content:flex-end}.rec-actions button{border:0;background:transparent;color:var(--bad);font-size:12px;padding:3px 0 0}.empty{text-align:center;color:var(--muted);padding:24px 8px}.foot{text-align:center;color:var(--muted);font-size:11px;margin-top:16px}
+@media(min-width:600px){main{padding-top:22px}.panel{padding:20px}.metric{padding:15px}.metric strong{font-size:22px}}
+
+.hidden{display:none!important}
+.auth-wrap{max-width:460px;margin:24px auto;padding:0 14px}
+.auth-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px}
+.auth-card h2{margin:0 0 8px;font-size:18px}.auth-card p{color:var(--muted);font-size:12px;line-height:1.7}
+.auth-card input{margin:7px 0 10px}.auth-error{color:var(--bad);font-size:12px;min-height:18px}
+header .inner{position:relative}
+.lock-btn{float:right;background:#ffffff1c;color:#fff;border:1px solid #ffffff44;border-radius:8px;padding:7px 10px;font:inherit;font-size:12px}
+
+</head>
+<body>
+<header><div class="inner"><button class="lock-btn hidden" id="lockButton" type="button">ロック</button><small>SCALPING JOURNAL</small><h1>Trade Log</h1><p>取引を記録して、自分の勝ちパターンを見つけよう。</p></div></header>
+
+<section class="auth-wrap" id="authPanel">
+ <div class="auth-card">
+  <h2 id="authTitle">Trade Logを保護</h2>
+  <p id="authDescription">パスフレーズを設定してください。取引データはこの端末内で暗号化して保存されます。パスフレーズを忘れると復元できません。</p>
+  <label for="pass1">パスフレーズ</label><input id="pass1" type="password" autocomplete="current-password" placeholder="十分に長いものを設定" minlength="12">
+  <div id="confirmWrap"><label for="pass2">パスフレーズ（確認）</label><input id="pass2" type="password" autocomplete="new-password" placeholder="もう一度入力"></div>
+  <div class="auth-error" id="authError"></div>
+  <button class="btn primary" id="authButton" type="button">暗号化して開始</button>
+  <p class="hint">推奨：他サービスと使い回さない、12文字以上のパスフレーズ。</p>
+ </div>
+</section>
+<main id="appMain" class="hidden">
+
+<section class="metrics" aria-label="集計">
+ <div class="metric"><label>累計損益</label><strong id="total">¥0</strong></div>
+ <div class="metric"><label>勝率</label><strong id="winrate">—</strong></div>
+ <div class="metric"><label>取引回数</label><strong id="count">0回</strong></div>
+</section>
+<section class="panel">
+<h2>取引を記録</h2>
+<form id="tradeForm">
+<div class="formgrid">
+ <div class="field"><label for="date">日付</label><input id="date" type="date" required></div>
+ <div class="field"><label for="ticker">銘柄名・コード</label><input id="ticker" placeholder="例：スクエニ / 9684" required></div>
+ <div class="field full"><label>売買方向</label><div class="seg">
+  <label><input type="radio" name="side" value="buy" checked><span>買い</span></label>
+  <label><input type="radio" name="side" value="sell"><span>売り（空売り）</span></label>
+ </div></div>
+ <div class="field"><label for="entry">エントリー価格（円）</label><input id="entry" type="number" min="0.01" step="any" placeholder="例：3645" required></div>
+ <div class="field"><label for="exit">決済価格（円）</label><input id="exit" type="number" min="0.01" step="any" placeholder="例：3660" required></div>
+ <div class="field"><label for="qty">株数</label><input id="qty" type="number" min="1" step="1" value="100" required></div>
+ <div class="field"><label for="fees">手数料等（円・任意）</label><input id="fees" type="number" min="0" step="any" value="0"></div>
+ <div class="field"><label for="vwap">VWAPとの位置</label><select id="vwap"><option value="上">上</option><option value="下">下</option><option value="付近">付近</option><option value="未確認">未確認</option></select></div>
+ <div class="field"><label for="volume">出来高</label><select id="volume"><option value="増加">増加</option><option value="通常">通常</option><option value="減少">減少</option><option value="未確認">未確認</option></select></div>
+ <div class="field full"><label for="reason">エントリー理由</label><input id="reason" placeholder="例：VWAP上抜け・高値ブレイク"></div>
+ <div class="field full"><label for="note">メモ・反省（任意）</label><textarea id="note" rows="2" placeholder="例：損切りを予定価格で実行できた"></textarea></div>
+</div>
+<p class="hint">損益は「価格差 × 株数 − 手数料等」で自動計算します。税金は含みません。</p>
+<div class="actions"><button class="btn primary" type="submit">記録を保存</button><button class="btn secondary" type="reset" id="reset">クリア</button></div>
+</form>
+</section>
+<section class="panel">
+<div class="toolbar"><h2>取引履歴</h2><select id="filter"><option value="all">すべて</option><option value="today">今日</option><option value="week">直近7日</option></select></div>
+<div id="records"><div class="empty">まだ記録がありません。最初の取引を記録してみよう！</div></div>
+<div class="actions">
+ <button class="btn secondary" id="backup">暗号化バックアップ</button>
+ <button class="btn secondary" id="restore">バックアップを復元</button>
+ <input id="restoreFile" type="file" accept=".json,application/json" class="hidden">
+</div>
+<p class="hint">データは端末内で暗号化して保存されます。別端末では暗号化バックアップを復元してください。復元すると、その端末の現在の記録は置き換わります。</p>
+</section>
+<p class="foot">Trade Log · 個人用トレード記録</p>
+</main>
+<script>
+const $=id=>document.getElementById(id), KEY='trade-log-encrypted-v2';
+const ITERATIONS=310000;
+let trades=[], secret=null, unlocked=false, saving=false;
+const enc=new TextEncoder(), dec=new TextDecoder();
+function b64(bytes){let s='';for(const b of bytes)s+=String.fromCharCode(b);return btoa(s)}
+function unb64(s){return Uint8Array.from(atob(s),c=>c.charCodeAt(0))}
+function random(n){return crypto.getRandomValues(new Uint8Array(n))}
+async function derive(pass,salt){
+ const material=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);
+ return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:ITERATIONS,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encryptData(data,pass,saltBytes=null){
+ const salt=saltBytes||random(16),iv=random(12),key=await derive(pass,salt);
+ const cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(JSON.stringify(data)));
+ return {format:'TradeLogEncryptedBackup',version:2,kdf:'PBKDF2-SHA256',iterations:ITERATIONS,cipher:'AES-256-GCM',salt:b64(salt),iv:b64(iv),data:b64(new Uint8Array(cipher))};
+}
+async function decryptEnvelope(env,pass){
+ if(!env||env.format!=='TradeLogEncryptedBackup'||env.version!==2||env.kdf!=='PBKDF2-SHA256'||env.cipher!=='AES-256-GCM')throw new Error('対応していないバックアップ形式です。');
+ if(env.iterations!==ITERATIONS)throw new Error('暗号化設定が一致しません。');
+ const key=await derive(pass,unb64(env.salt));
+ const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(env.iv)},key,unb64(env.data));
+ const data=JSON.parse(dec.decode(plain));
+ if(!Array.isArray(data))throw new Error('バックアップのデータ形式が正しくありません。');
+ return data;
+}
+function envelope(){const raw=localStorage.getItem(KEY);return raw?JSON.parse(raw):null}
+async function persist(){
+ if(!unlocked||!secret)return;
+ saving=true;
+ try{const env=await encryptData(trades,secret);localStorage.setItem(KEY,JSON.stringify(env));}
+ catch(e){alert('暗号化保存に失敗しました。端末の空き容量やブラウザ設定を確認してください。');}
+ finally{saving=false}
+}
+function showApp(){
+ unlocked=true;$('authPanel').classList.add('hidden');$('appMain').classList.remove('hidden');$('lockButton').classList.remove('hidden');
+ $('date').value=today();render();
+}
+function lock(){
+ secret=null;trades=[];unlocked=false;$('appMain').classList.add('hidden');$('lockButton').classList.add('hidden');$('authPanel').classList.remove('hidden');
+ $('pass1').value='';$('pass2').value='';$('authError').textContent='';
+ $('authTitle').textContent='Trade Logをロック解除';$('authDescription').textContent='設定したパスフレーズを入力してください。';
+ $('confirmWrap').classList.add('hidden');$('authButton').textContent='ロック解除';
+}
+$('authButton').addEventListener('click',async()=>{
+ const p1=$('pass1').value,p2=$('pass2').value;
+ $('authError').textContent='';
+ try{
+  if(!crypto.subtle)throw new Error('この環境では安全な暗号化機能が利用できません。HTTPSで開いてください。');
+  const old=envelope();
+  if(!old){
+   if(p1.length<12)throw new Error('パスフレーズは12文字以上にしてください。');
+   if(p1!==p2)throw new Error('確認用パスフレーズが一致しません。');
+   secret=p1;trades=[];const env=await encryptData(trades,secret);localStorage.setItem(KEY,JSON.stringify(env));showApp();
+  }else{
+   if(!p1)throw new Error('パスフレーズを入力してください。');
+   secret=p1;trades=await decryptEnvelope(old,secret);showApp();
+  }
+ }catch(e){secret=null;$('authError').textContent=e.name==='OperationError'?'パスフレーズが違うか、データが破損しています。':e.message;}
+});
+$('lockButton').addEventListener('click',()=>{if(confirm('アプリをロックしますか？未保存の変更がないことを確認してください。'))lock()});
+const yen=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString('ja-JP');
+function today(){return new Date().toLocaleDateString('sv-SE')}
+function fmt(n){return Number(n).toLocaleString('ja-JP')}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function render(){
+ const filtered=trades.filter(t=>{const f=$('filter').value;if(f==='today')return t.date===today();if(f==='week'){const d=new Date(t.date+'T00:00:00'),now=new Date(today()+'T00:00:00');return (now-d)/86400000<=7&&(now-d)/86400000>=0}return true});
+ const total=filtered.reduce((s,t)=>s+t.pnl,0),wins=filtered.filter(t=>t.pnl>0).length;
+ $('total').textContent=yen(total);$('total').className=total>0?'positive':total<0?'negative':'';
+ $('winrate').textContent=filtered.length?(wins/filtered.length*100).toFixed(1)+'%':'—';$('count').textContent=filtered.length+'回';
+ $('records').innerHTML=filtered.length?filtered.slice().sort((a,b)=>b.created-a.created).map(t=>`
+ <article class="record"><div><div class="rec-title">${esc(t.ticker)} · ${t.side==='buy'?'買い':'売り'}</div>
+ <div class="rec-meta">${esc(t.date)}　${fmt(t.entry)} → ${fmt(t.exit)}円　${fmt(t.qty)}株<br>VWAP：${esc(t.vwap)}　出来高：${esc(t.volume)}<br>${esc(t.reason||'理由未記入')}${t.note?'<br>'+esc(t.note):''}</div></div>
+ <div class="rec-pnl ${t.pnl>0?'positive':t.pnl<0?'negative':''}">${yen(t.pnl)}</div>
+ <div class="rec-actions"><button data-del="${esc(t.id)}">削除</button></div></article>`).join(''):'<div class="empty">該当する取引はありません。</div>';
+}
+$('tradeForm').addEventListener('submit',async e=>{
+ e.preventDefault();if(!unlocked||saving)return;
+ const entry=+$('entry').value,exit=+$('exit').value,qty=+$('qty').value,fees=+$('fees').value||0,side=document.querySelector('input[name="side"]:checked').value;
+ if(!(entry>0&&exit>0&&qty>0&&fees>=0))return;
+ const pnl=(side==='buy'?exit-entry:entry-exit)*qty-fees;
+ trades.push({id:Date.now().toString()+Math.random().toString(16).slice(2),created:Date.now(),date:$('date').value,ticker:$('ticker').value.trim(),side,entry,exit,qty,fees,pnl,vwap:$('vwap').value,volume:$('volume').value,reason:$('reason').value.trim(),note:$('note').value.trim()});
+ await persist();render();$('tradeForm').reset();$('date').value=today();$('qty').value=100;$('fees').value=0;
+});
+$('records').addEventListener('click',async e=>{const id=e.target.dataset.del;if(id&&confirm('この記録を削除しますか？')){trades=trades.filter(t=>t.id!==id);await persist();render()}});
+$('filter').addEventListener('change',render);
+function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+$('backup').onclick=()=>{if(!unlocked)return;const env=localStorage.getItem(KEY);download('trade-log-encrypted-backup.json',env,'application/json');};
+$('restore').onclick=()=>$('restoreFile').click();
+$('restoreFile').addEventListener('change',async e=>{
+ const file=e.target.files[0];if(!file)return;
+ try{
+  const env=JSON.parse(await file.text()),pass=prompt('バックアップ作成時のパスフレーズを入力してください。');
+  if(pass===null)return;
+  const restored=await decryptEnvelope(env,pass);
+  if(!confirm(`バックアップから${restored.length}件の記録を復元します。現在の端末の記録は置き換わります。続行しますか？`))return;
+  secret=pass;trades=restored;await persist();render();alert('復元しました。');
+ }catch(err){alert(err.name==='OperationError'?'パスフレーズが違うか、バックアップが破損しています。':err.message)}
+ finally{e.target.value=''}
+});
+$('reset').addEventListener('click',()=>setTimeout(()=>{$('date').value=today();$('qty').value=100;$('fees').value=0},0));
+if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+if(envelope()){
+ $('authTitle').textContent='Trade Logをロック解除';$('authDescription').textContent='設定したパスフレーズを入力してください。';$('confirmWrap').classList.add('hidden');$('authButton').textContent='ロック解除';
+}else{
+ $('authTitle').textContent='Trade Logを保護';$('authDescription').textContent='パスフレーズを設定してください。取引データはこの端末内で暗号化して保存されます。忘れると復元できません。';$('confirmWrap').classList.remove('hidden');$('authButton').textContent='暗号化して開始';
+}
+</script>
+</body></html>
