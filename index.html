@@ -12,11 +12,11 @@
 :root{--ink:#172b3a;--muted:#71808b;--line:#e5eaee;--bg:#f4f7f8;--card:#fff;--accent:#176b66;--good:#16805d;--bad:#c34d4d}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;font-size:14px}
 header{background:#142b3b;color:white;padding:22px 18px 20px}header .inner,main{max-width:760px;margin:auto}header small{opacity:.72;letter-spacing:.12em;font-weight:700}header h1{margin:5px 0 2px;font-size:24px}header p{margin:0;color:#c8d4dc;font-size:12px}
-main{padding:16px 14px 40px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px}.metric,.panel{background:var(--card);border:1px solid var(--line);border-radius:14px}.metric{padding:12px 11px}.metric label{display:block;color:var(--muted);font-size:11px}.metric strong{display:block;font-size:19px;margin-top:5px;font-variant-numeric:tabular-nums}.positive{color:var(--good)!important}.negative{color:var(--bad)!important}
+main{padding:16px 14px 40px}.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:14px}.metric,.panel{background:var(--card);border:1px solid var(--line);border-radius:14px}.metric{padding:12px 11px}.metric label{display:block;color:var(--muted);font-size:11px}.metric strong{display:block;font-size:19px;margin-top:5px;font-variant-numeric:tabular-nums}.positive{color:var(--good)!important}.negative{color:var(--bad)!important}
 .panel{padding:16px;margin-bottom:14px}.panel h2{font-size:16px;margin:0 0 13px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.field{min-width:0}.field.full{grid-column:1/-1}label{display:block;color:#52616c;font-size:12px;margin-bottom:5px;font-weight:650}input,select,textarea{width:100%;border:1px solid #d9e1e6;border-radius:9px;padding:11px 10px;background:#fff;color:var(--ink);font:inherit;min-height:42px}input:focus,select:focus,textarea:focus{outline:2px solid #b6d8d2;border-color:var(--accent)}.seg{display:flex;gap:8px}.seg label{flex:1;margin:0}.seg input{position:absolute;opacity:0;pointer-events:none}.seg span{display:block;text-align:center;border:1px solid #d9e1e6;border-radius:9px;padding:10px}.seg input:checked+span{background:#e6f2f0;border-color:var(--accent);color:var(--accent);font-weight:700}
 .actions{display:flex;gap:8px;margin-top:14px}.btn{border:0;border-radius:9px;padding:11px 15px;font:inherit;font-weight:700;cursor:pointer}.primary{background:var(--accent);color:#fff;flex:1}.secondary{background:#edf1f3;color:#334653}.danger{background:#fff0f0;color:var(--bad)}.hint{color:var(--muted);font-size:11px;margin:9px 0 0}
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.toolbar h2{margin:0}.toolbar select{width:auto;min-width:110px;padding:8px}.record{border-top:1px solid var(--line);padding:12px 0;display:grid;grid-template-columns:1fr auto;gap:8px}.record:first-child{border-top:0}.rec-title{font-weight:750}.rec-meta{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6}.rec-pnl{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}.rec-actions{grid-column:1/-1;display:flex;justify-content:flex-end}.rec-actions button{border:0;background:transparent;color:var(--bad);font-size:12px;padding:3px 0 0}.empty{text-align:center;color:var(--muted);padding:24px 8px}.foot{text-align:center;color:var(--muted);font-size:11px;margin-top:16px}
-@media(min-width:600px){main{padding-top:22px}.panel{padding:20px}.metric{padding:15px}.metric strong{font-size:22px}}
+@media(min-width:600px){main{padding-top:22px}.panel{padding:20px}.metric{padding:15px}.metric strong{font-size:22px}.metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 .hidden{display:none!important}
 .auth-wrap{max-width:460px;margin:24px auto;padding:0 14px}
@@ -48,7 +48,13 @@ header .inner{position:relative}
  <div class="metric"><label>累計損益</label><strong id="total">¥0</strong></div>
  <div class="metric"><label>勝率</label><strong id="winrate">—</strong></div>
  <div class="metric"><label>取引回数</label><strong id="count">0回</strong></div>
+ <div class="metric"><label>ペイオフレシオ</label><strong id="payoff">—</strong></div>
+ <div class="metric"><label>プロフィットファクター</label><strong id="pf">—</strong></div>
+ <div class="metric"><label>期待値／1回</label><strong id="expectancy">—</strong></div>
+ <div class="metric"><label>平均利益</label><strong id="avgWin">—</strong></div>
+ <div class="metric"><label>平均損失</label><strong id="avgLoss">—</strong></div>
 </section>
+<p class="hint" style="margin:-5px 2px 14px">勝率は損益ゼロの取引を除外。期待値は損益ゼロを含む全取引の平均。各指標は上の履歴フィルターに連動します。</p>
 <section class="panel">
 <h2>取引を記録</h2>
 <form id="tradeForm">
@@ -151,9 +157,25 @@ function fmt(n){return Number(n).toLocaleString('ja-JP')}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function render(){
  const filtered=trades.filter(t=>{const f=$('filter').value;if(f==='today')return t.date===today();if(f==='week'){const d=new Date(t.date+'T00:00:00'),now=new Date(today()+'T00:00:00');return (now-d)/86400000<=7&&(now-d)/86400000>=0}return true});
- const total=filtered.reduce((s,t)=>s+t.pnl,0),wins=filtered.filter(t=>t.pnl>0).length;
+ const total=filtered.reduce((s,t)=>s+t.pnl,0);
+ const winners=filtered.filter(t=>Number(t.pnl)>0),losers=filtered.filter(t=>Number(t.pnl)<0);
+ const decisive=winners.length+losers.length;
+ const grossProfit=winners.reduce((s,t)=>s+Number(t.pnl),0);
+ const grossLossAbs=Math.abs(losers.reduce((s,t)=>s+Number(t.pnl),0));
+ const avgWin=winners.length?grossProfit/winners.length:null;
+ const avgLoss=losers.length?grossLossAbs/losers.length:null;
+ const payoff=avgWin!==null&&avgLoss!==null&&avgLoss>0?avgWin/avgLoss:null;
+ const pf=grossLossAbs>0?grossProfit/grossLossAbs:(grossProfit>0?Infinity:null);
+ const expectancy=filtered.length?total/filtered.length:null;
  $('total').textContent=yen(total);$('total').className=total>0?'positive':total<0?'negative':'';
- $('winrate').textContent=filtered.length?(wins/filtered.length*100).toFixed(1)+'%':'—';$('count').textContent=filtered.length+'回';
+ $('winrate').textContent=decisive?(winners.length/decisive*100).toFixed(1)+'%':'—';
+ $('count').textContent=filtered.length+'回';
+ $('payoff').textContent=payoff===null?'—':payoff.toFixed(2);
+ $('pf').textContent=pf===null?'—':(pf===Infinity?'∞':pf.toFixed(2));
+ $('expectancy').textContent=expectancy===null?'—':yen(expectancy);
+ $('expectancy').className=expectancy>0?'positive':expectancy<0?'negative':'';
+ $('avgWin').textContent=avgWin===null?'—':yen(avgWin);
+ $('avgLoss').textContent=avgLoss===null?'—':'−'+yen(avgLoss);
  $('records').innerHTML=filtered.length?filtered.slice().sort((a,b)=>b.created-a.created).map(t=>`
  <article class="record"><div><div class="rec-title">${esc(t.ticker)} · ${t.side==='buy'?'買い':'売り'}</div>
  <div class="rec-meta">${esc(t.date)}　${fmt(t.entry)} → ${fmt(t.exit)}円　${fmt(t.qty)}株<br>VWAP：${esc(t.vwap)}　出来高：${esc(t.volume)}<br>${esc(t.reason||'理由未記入')}${t.note?'<br>'+esc(t.note):''}</div></div>
